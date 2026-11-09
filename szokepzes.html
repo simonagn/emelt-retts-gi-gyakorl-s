@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Word Formation Practice – Emelt</title>
+<style>
+  :root { --ok:#1e8e3e; --bad:#d93025; --accent:#1a5fb4; --bg:#f6f7f9; }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg);
+         margin: 0; padding: 16px; color: #222; line-height: 1.9; }
+  .wrap { max-width: 820px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 20px 24px;
+          box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; line-height: 1.3; }
+  .sub { color: #666; margin: 0 0 16px; font-size: .95rem; line-height: 1.4; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  select, input[type=text].name { font-size: 1rem; padding: 6px 10px; border: 1px solid #bbb; border-radius: 8px; }
+  h2 { font-size: 1.15rem; margin: 10px 0 6px; }
+  .text { font-size: 1.05rem; }
+  .gap { white-space: nowrap; }
+  .gap input { font-size: 1rem; width: 9.5em; padding: 1px 6px; border: none; border-bottom: 2px solid #888;
+               background: #f3f6fb; border-radius: 4px 4px 0 0; }
+  .gap input:focus { outline: none; border-bottom-color: var(--accent); background: #e8f0fe; }
+  .gap .num { font-size: .75rem; font-weight: 700; color: var(--accent); vertical-align: super; margin-right: 1px; }
+  .gap .base { font-size: .8rem; font-weight: 700; letter-spacing: .03em; color: #555; margin-left: 3px; }
+  .gap.example input { border-bottom-color: #aaa; color: #555; font-style: italic; }
+  .gap.ok input { border-bottom-color: var(--ok); background: #e6f4ea; }
+  .gap.bad input { border-bottom-color: var(--bad); background: #fce8e6; }
+  .fix { color: var(--ok); font-weight: 600; font-size: .9rem; margin-left: 3px; }
+  .buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+  button { font-size: 1rem; padding: 8px 16px; border-radius: 8px; border: 1px solid var(--accent);
+           background: var(--accent); color: #fff; cursor: pointer; }
+  button.secondary { background: #fff; color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  .result { margin-top: 14px; font-size: 1.1rem; font-weight: 600; line-height: 1.4; }
+  .status { font-size: .9rem; color: #666; margin-top: 6px; line-height: 1.4; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Word Formation – Advanced Level Practice</h1>
+  <p class="sub">Read the text. Use the word in CAPITALS to form a word that fits the gap. There is an example (0) at the beginning.</p>
+
+  <div class="row">
+    <input type="text" class="name" id="studentName" placeholder="Your name">
+    <select id="taskSelect"></select>
+  </div>
+
+  <h2 id="title"></h2>
+  <div class="text" id="text"></div>
+
+  <div class="buttons">
+    <button id="checkBtn">Check</button>
+    <button id="showBtn" class="secondary">Show answers</button>
+    <button id="resetBtn" class="secondary">Try again</button>
+  </div>
+  <div class="result" id="result"></div>
+  <div class="status" id="status"></div>
+</div>
+
+<script>
+/* =====================================================================
+   BEÁLLÍTÁSOK
+   SHEET_URL: ide másold a Google Apps Script webapp URL-jét
+   (ugyanaz lehet, mint a wordtests-nél). Ha üres, nem küld eredményt.
+   ===================================================================== */
+const SHEET_URL = "";
+
+/* =====================================================================
+   FELADATOK
+   Jelölés a szövegben:  [ALAPSZÓ:helyes válasz]
+   Több elfogadható válasz:  [ALAPSZÓ:válasz1/válasz2]
+   Az első [..] a 0. példa (kitöltve jelenik meg, nem számít bele a pontba).
+   ===================================================================== */
+const TASKS = [
+  {
+    title: "Working from home",
+    text: `Over the past few years, remote work has changed the daily lives of millions of [EMPLOY:employees]. For many people, the biggest advantage is [FLEXIBLE:flexibility]: they can organise their own day and no longer have to spend hours stuck in [PREDICT:unpredictable] traffic. However, working alone at the kitchen table can also lead to feelings of [LONELY:loneliness], especially for younger workers who live by themselves.
+
+Some managers remain [CONVINCE:unconvinced] that staff are truly productive at home, yet several studies suggest that output has [SIGNIFY:significantly] improved in many sectors. [SUCCEED:Successful] remote teams usually rely on clear communication, and regular video calls help to maintain good working [RELATE:relationships]. Without a [DEPEND:dependable] internet connection, though, even the best plans fall apart.
+
+Today, many companies offer a [COMBINE:combination] of office and home working, and most experts agree that this arrangement is [LIKE:unlikely] to disappear any time soon.`
+  },
+  {
+    title: "The true cost of fast fashion",
+    text: `The clothing industry is one of the world's biggest [POLLUTE:polluters]. Cheap, trendy clothes have become [INCREASE:increasingly] popular, but their [PRODUCE:production] requires huge amounts of water and energy. In some countries, factory workers spend long hours in [SAFE:unsafe] conditions for very low wages.
+
+Many shoppers are simply [AWARE:unaware] of these problems, as the real story behind a five-euro T-shirt is rarely told. Campaigners argue that consumers should take [RESPONSIBLE:responsibility] for what they buy, and they point out that second-hand shops offer an [ATTRACT:attractive] alternative to buying new.
+
+Several well-known brands have recently made a [COMMIT:commitment] to using recycled materials, but critics claim that some of these promises are [LEAD:misleading]. Real change will require a [WILLING:willingness] to buy fewer, better-quality items. [FORTUNATE:Fortunately], attitudes among young people seem to be slowly changing.`
+  }
+];
+
+/* ===================================================================== */
+
+const taskSelect = document.getElementById("taskSelect");
+const textEl = document.getElementById("text");
+const titleEl = document.getElementById("title");
+const resultEl = document.getElementById("result");
+const statusEl = document.getElementById("status");
+const checkBtn = document.getElementById("checkBtn");
+const showBtn = document.getElementById("showBtn");
+const resetBtn = document.getElementById("resetBtn");
+const nameInput = document.getElementById("studentName");
+
+let gaps = [];   // {input, wrap, answers}
+let checked = false;
+
+try { nameInput.value = localStorage.getItem("wf_name") || ""; } catch (e) {}
+nameInput.addEventListener("change", () => { try { localStorage.setItem("wf_name", nameInput.value.trim()); } catch (e) {} });
+
+TASKS.forEach((t, i) => {
+  const o = document.createElement("option");
+  o.value = i; o.textContent = `Task ${i + 1}: ${t.title}`;
+  taskSelect.appendChild(o);
+});
+taskSelect.addEventListener("change", () => render(+taskSelect.value));
+
+const norm = s => s.trim().toLowerCase().replace(/[’`]/g, "'").replace(/\s+/g, " ");
+
+function render(idx) {
+  const task = TASKS[idx];
+  titleEl.textContent = task.title;
+  textEl.innerHTML = "";
+  gaps = []; checked = false;
+  resultEl.textContent = ""; statusEl.textContent = "";
+  checkBtn.disabled = false;
+
+  let n = 0;
+  task.text.split(/\n\s*\n/).forEach(para => {
+    const p = document.createElement("p");
+    const re = /\[([A-Z\-]+):([^\]]+)\]/g;
+    let last = 0, m;
+    while ((m = re.exec(para)) !== null) {
+      p.appendChild(document.createTextNode(para.slice(last, m.index)));
+      const answers = m[2].split("/").map(norm);
+      const wrap = document.createElement("span");
+      wrap.className = "gap";
+      const num = document.createElement("span");
+      num.className = "num"; num.textContent = n;
+      const input = document.createElement("input");
+      input.type = "text"; input.autocomplete = "off"; input.spellcheck = false;
+      input.setAttribute("autocapitalize", "off");
+      const base = document.createElement("span");
+      base.className = "base"; base.textContent = "(" + m[1] + ")";
+      wrap.append(num, input, base);
+      if (n === 0) {
+        wrap.classList.add("example");
+        input.value = m[2].split("/")[0];
+        input.readOnly = true;
+      } else {
+        gaps.push({ input, wrap, answers, base: m[1] });
+        input.addEventListener("keydown", e => {
+          if (e.key === "Enter") {
+            const i = gaps.findIndex(g => g.input === input);
+            if (gaps[i + 1]) gaps[i + 1].input.focus(); else checkAnswers();
+          }
+        });
+      }
+      p.appendChild(wrap);
+      last = re.lastIndex; n++;
+    }
+    p.appendChild(document.createTextNode(para.slice(last)));
+    textEl.appendChild(p);
+  });
+}
+
+function clearMarks() {
+  gaps.forEach(g => {
+    g.wrap.classList.remove("ok", "bad");
+    const f = g.wrap.querySelector(".fix"); if (f) f.remove();
+  });
+}
+
+function checkAnswers() {
+  clearMarks();
+  let score = 0;
+  gaps.forEach(g => {
+    const good = g.answers.includes(norm(g.input.value));
+    g.wrap.classList.add(good ? "ok" : "bad");
+    if (good) score++;
+  });
+  const total = gaps.length;
+  const pct = Math.round(score / total * 100);
+  resultEl.textContent = `Score: ${score} / ${total} (${pct}%)`;
+  resultEl.style.color = pct >= 80 ? "var(--ok)" : pct >= 50 ? "#b06000" : "var(--bad)";
+  if (!checked) { checked = true; sendResult(score, total); }
+}
+
+function showAnswers() {
+  if (!checked) checkAnswers();
+  gaps.forEach(g => {
+    if (g.wrap.classList.contains("bad") && !g.wrap.querySelector(".fix")) {
+      const f = document.createElement("span");
+      f.className = "fix"; f.textContent = "→ " + g.answers[0];
+      g.wrap.appendChild(f);
+    }
+  });
+}
+
+function sendResult(score, total) {
+  if (!SHEET_URL) return;
+  const name = nameInput.value.trim();
+  if (!name) { statusEl.textContent = "Tip: type your name before checking so your teacher gets your result."; return; }
+  const data = new URLSearchParams({
+    name,
+    test: "Word formation – " + TASKS[+taskSelect.value].title,
+    score, total,
+    percent: Math.round(score / total * 100),
+    wrong: gaps.filter(g => g.wrap.classList.contains("bad"))
+               .map(g => `${g.base}: "${g.input.value.trim()}" (→ ${g.answers[0]})`).join("; "),
+    date: new Date().toLocaleString("hu-HU")
+  });
+  fetch(SHEET_URL, { method: "POST", mode: "no-cors", body: data })
+    .then(() => statusEl.textContent = "Result sent to your teacher ✓")
+    .catch(() => statusEl.textContent = "Could not send the result (check your internet connection).");
+}
+
+checkBtn.addEventListener("click", checkAnswers);
+showBtn.addEventListener("click", showAnswers);
+resetBtn.addEventListener("click", () => render(+taskSelect.value));
+
+render(0);
+</script>
+</body>
+</html>
